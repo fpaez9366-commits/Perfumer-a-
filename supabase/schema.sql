@@ -1,0 +1,14 @@
+create table products(id uuid primary key default gen_random_uuid(),name text not null,brand text not null,price numeric not null default 0,description text default '',category text not null,images text[] not null default '{}',available boolean not null default true,featured boolean not null default false,created_at timestamptz default now());
+create table settings(id int primary key default 1 check(id=1),store_name text default 'Mi Perfumería',whatsapp text default '',instagram text default '',phone text default '',address text default '',hours text default '');
+insert into settings(id) values(1);
+create table admins(user_id uuid primary key references auth.users on delete cascade);
+alter table products enable row level security;alter table settings enable row level security;alter table admins enable row level security;
+create function is_admin() returns boolean language sql security definer stable set search_path=public as $$select exists(select 1 from admins where user_id=auth.uid())$$;
+create policy "ver productos" on products for select using(true);
+create policy "admin productos" on products for all using(is_admin()) with check(is_admin());
+create policy "ver datos" on settings for select using(true);
+create policy "admin datos" on settings for all using(is_admin()) with check(is_admin());
+create policy "ver propio" on admins for select using(user_id=auth.uid());
+insert into storage.buckets(id,name,public) values('perfumes','perfumes',true);
+create policy "ver fotos" on storage.objects for select using(bucket_id='perfumes');
+create policy "admin fotos" on storage.objects for all using(bucket_id='perfumes' and is_admin()) with check(bucket_id='perfumes' and is_admin());
