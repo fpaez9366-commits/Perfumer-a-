@@ -72,7 +72,7 @@ function Panel(){
 }
 
 function Form({p,done,cancel,flash}:{p:Partial<Product>;done:()=>void;cancel:()=>void;flash:(t:string)=>void}){
-  const[f,setF]=useState({name:p.name??'',brand:p.brand??'',price:p.price===undefined?'':String(p.price),description:p.description??'',category:p.category??CATS[0],available:p.available??true,featured:p.featured??false,images:p.images??[]});
+  const[f,setF]=useState({name:p.name??'',brand:p.brand??'',price:p.price===undefined?'':String(p.price),description:p.description??'',categories:p.categories??[],available:p.available??true,featured:p.featured??false,images:p.images??[]});
   const[busy,setBusy]=useState(false);
   const set=(k:string,v:unknown)=>setF(x=>({...x,[k]:v}));
   const up=async(files:FileList|null)=>{
@@ -86,7 +86,7 @@ function Form({p,done,cancel,flash}:{p:Partial<Product>;done:()=>void;cancel:()=
     setBusy(false);
   };
   const save=async(ev:FormEvent)=>{
-    ev.preventDefault();setBusy(true);
+    ev.preventDefault();if(!f.categories.length)return flash('Elegí al menos una categoría');setBusy(true);
     const row={...f,name:f.name.trim(),brand:f.brand.trim(),price:Number(f.price)};
     const{error}=p.id?await sb.from('products').update(row).eq('id',p.id):await sb.from('products').insert(row);
     setBusy(false);if(error)return flash('Error: '+error.message);flash('Guardado ✓');done();
@@ -97,7 +97,7 @@ function Form({p,done,cancel,flash}:{p:Partial<Product>;done:()=>void;cancel:()=
     <L t="Marca"><input className={inp} required value={f.brand} onChange={e=>set('brand',e.target.value)}/></L>
     <L t="Precio (ARS)"><input className={inp} required type="number" min="0" inputMode="decimal" value={f.price} onChange={e=>set('price',e.target.value)}/></L>
     <L t="Descripción"><textarea className={inp} rows={3} value={f.description} onChange={e=>set('description',e.target.value)}/></L>
-    <L t="Categoría"><select className={inp} value={f.category} onChange={e=>set('category',e.target.value)}>{CATS.map(c=><option key={c}>{c}</option>)}</select></L>
+    <div className="text-sm"><span className="mb-2 block text-neutral-600">Categorías (podés elegir varias)</span><div className="space-y-2">{CATS.map(c=><label key={c} className="flex items-center gap-3"><input type="checkbox" className="h-5 w-5" checked={f.categories.includes(c)} onChange={e=>set('categories',e.target.checked?[...f.categories,c]:f.categories.filter(x=>x!==c))}/>{c}</label>)}</div></div>
     <L t="Fotografías (podés elegir varias)"><input className={inp} type="file" accept="image/*" multiple onChange={e=>up(e.target.files)}/></L>
     <div className="flex flex-wrap gap-2">{f.images.map(u=><div key={u} className="relative h-24 w-20 bg-neutral-100"><img src={u} alt="" className="h-full w-full object-cover"/><button type="button" aria-label="Quitar foto" className="absolute right-0 top-0 bg-black px-2 text-white" onClick={()=>set('images',f.images.filter(i=>i!==u))}>✕</button></div>)}</div>
     <label className="flex items-center gap-3"><input type="checkbox" className="h-5 w-5" checked={f.available} onChange={e=>set('available',e.target.checked)}/>Disponible</label>
